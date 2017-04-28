@@ -31,7 +31,6 @@ counter        VAR     Word
 ACC            VAR     Word
 excess         VAR     Nib
 tone           VAR     Byte
-loseB          VAR     Bit
 
 
 
@@ -77,7 +76,7 @@ SEROUT lcdPin, T9600, [251,
                       %10001,                '*       *
                       %11111]                '* * * * *
 
-hldCell = Line0
+
 
 hold:
   SEROUT lcdPin, T9600, [21]
@@ -85,14 +84,14 @@ hold:
   DO
   LOOP UNTIL pshbtn = 1
 
-  ACC = 0
+
 
   SEROUT lcdPin, T9600, [22, 12]
   PAUSE 5
 
 initWSound:
-
-  loseB = 0
+  hldCell = Line0
+  ACC = 0
   SEROUT lcdPin, T9600, [218, 212, 225, 210, 228, 227, 211, 226, 225, 213, 229]
 
 
@@ -141,7 +140,7 @@ begin:
 
     pCell = cell
 
-    ACC = ACC + 505
+    ACC = ACC + 680
 
     IF (y > 22 AND y < 92) THEN
       IF (cell <> Line0+19 AND cell <> Line1+19 AND cell <> Line2+19 AND cell <> Line3+19)THEN
@@ -156,16 +155,14 @@ begin:
     ENDIF
 
     IF (x > 10390 AND x < 10455) THEN
+      IF ((cell < Line2 OR cell > Line2+18)AND cell >= Line1) THEN
         cell = cell - 20
         tone = upTone
-      IF ((pCell >= Line2 AND pCell <= Line2+18)) THEN
-        loseB = 1
       ENDIF
     ELSEIF (x < 75 AND x > 15) THEN
-      cell = cell + 20
-      tone = downTone
-      IF ((pCell >= Line1 AND pCell <= Line1+17)) THEN
-        loseB = 1
+      IF ((cell < Line1 OR cell > Line1+17 OR cell = Line2+18) AND cell < Line3) THEN
+        cell = cell + 20
+        tone = downTone
       ENDIF
     ENDIF
 
@@ -182,11 +179,6 @@ begin:
       ACC = ACC + 12
     ENDIF
 
-    IF (loseB = 1) THEN
-      PAUSE 250
-      GOTO lose
-    ENDIF
-
     IF ((cell >= Line0 AND cell <= Line0 + 19) OR (cell >= Line2 AND cell <= Line2 + 19)) THEN
       IF cell//4 = 2 THEN
         PAUSE 250
@@ -201,9 +193,9 @@ begin:
 
     ACC = ACC + 18
 
-    IF ACC >= 64435 THEN
+    IF ACC >= 60000 THEN
       excess = excess + 1
-      ACC = ACC - 65535
+      ACC = ACC - 60000
     ENDIF
 
     IF pshbtn = 1 THEN
@@ -222,7 +214,6 @@ lose:
       GOTO initWSound
     ENDIF
   NEXT
-  hldcell= Line0
   GOTO hold
 
 
@@ -231,13 +222,12 @@ winMessage:
   SEROUT lcdPin, T9600, [12]
   PAUSE 5
   ACC = ACC/10
-  SEROUT lcdPin, T9600, [Line0+2, "YOU WON SMARTY!", Line1, "Time: ", DEC3 (ACC + (excess * 65535))/100, ".", DEC2 (ACC+(excess * 65535))//100, "s", 218, 210, 228, 228, 213, 230]
+  SEROUT lcdPin, T9600, [Line0+2, "YOU WON SMARTY!", Line1, "Time: ", DEC (ACC/100 + (excess * 60)), ".", DEC2 ACC//100, "s", 218, 210, 228, 228, 213, 230]
   FOR counter = 1 TO 10000
     IF pshbtn = 1 THEN
       GOTO initWSound
     ENDIF
   NEXT
-  hldCell = Line0
   GOTO hold
 
 gamePause:
