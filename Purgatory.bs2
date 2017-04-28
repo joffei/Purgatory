@@ -1,0 +1,368 @@
+'Purgatory 2.0
+'Author: Jesse Offei-Nkansah
+
+
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+
+
+lcdPin         PIN     14
+yIn            PIN     7
+xIn            PIN     6
+pshbtn         PIN     0
+
+T9600          CON     84
+Line0          CON     128                   ' Line 0, character 0
+Line1          CON     148                   ' Line 1, character 0
+Line2          CON     168                   ' Line 2, character 0
+Line3          CON     188                   ' Line 3, character 0
+upTone         CON     231
+downTone       CON     226
+leftTone       CON     228
+rightTone      CON     229
+
+cell           VAR     Byte
+pCell          VAR     Byte
+hldCell        VAR     Byte
+x              VAR     Word
+y              VAR     Word
+counter        VAR     Word
+ACC            VAR     Word
+ACCD           VAR     Word
+excess         VAR     Byte
+excessD        VAR     Byte
+tone           VAR     Byte
+level          VAR     Word
+levelD         VAR     Word
+winLoc         VAR     Byte
+rank           VAR     Word
+leader         VAR     Byte(3)
+
+
+
+
+First          DATA    "J", "E", "S", 1, Word 0, Word 28740
+Second         DATA    "T", "Y", " ", 1, Word 0, Word 28750
+Third          DATA    "N", "/", "A", 0, Word 0, Word 0
+
+
+
+
+'0
+SEROUT lcdPin, T9600, [248,
+                      %00000,                '
+                      %00000,                '
+                      %00110,                '    * *
+                      %01111,                '  * * * *
+                      %01111,                '  * * * *
+                      %00110,                '    * *
+                      %00000,                '
+                      %00000]                '
+
+'1
+SEROUT lcdPin, T9600, [249,
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %11111]                '* * * * *
+
+'2
+SEROUT lcdPin, T9600, [250,
+                      %11111,                '* * * * *
+                      %10001,                '*       *
+                      %10001,                '*       *
+                      %10001,                '*       *
+                      %10001,                '*       *
+                      %10001,                '*       *
+                      %10001,                '*       *
+                      %11111]                '* * * * *
+
+'3
+SEROUT lcdPin, T9600, [251,
+                      %11111,                '* * * * *
+                      %10001,                '*       *
+                      %10111,                '*   * * *
+                      %11111,                '* * * * *
+                      %11111,                '* * * * *
+                      %10111,                '*   * * *
+                      %10001,                '*       *
+                      %11111]                '* * * * *
+
+'4
+SEROUT lcdPin, T9600, [252,
+                      %11111,                '* * * * *
+                      %00000,                '
+                      %00000,                '
+                      %00000,                '
+                      %00000,                '
+                      %00000,                '
+                      %00000,                '
+                      %00000]                '
+
+
+
+hold:
+  SEROUT lcdPin, T9600, [21]
+  PAUSE 5
+
+  DO
+  LOOP UNTIL pshbtn = 1
+
+  FOR counter = 1 TO 500
+    IF pshbtn = 0 THEN
+      SEROUT lcdPin, T9600, [22, 12]
+      PAUSE 5
+      GOTO initWSound
+    ENDIF
+  NEXT
+
+  SEROUT lcdPin, T9600, [22, 12]
+  PAUSE 5
+  GOTO LeaderBoard
+
+
+initWSound:
+  hldCell = Line0
+  level = 1
+  ACC = 0
+  SEROUT lcdPin, T9600, [218, 212, 225, 210, 228, 227, 211, 226, 225, 213, 229]
+
+
+initialize:
+  SEROUT lcdPin, T9600, [12]
+  PAUSE 5
+
+  FOR cell = 128 TO 207
+    IF ((cell >= Line0 AND cell <= Line0 + 19) OR (cell >= Line2 AND cell <= Line2 + 19)) THEN
+      IF cell//4 = 2 THEN
+        SEROUT lcdPin, T9600, [cell, 1]
+      ENDIF
+    ELSEIF ((cell >= Line1 AND cell <= Line1 + 19) OR (cell >= Line3 AND cell <= Line3 + 19)) THEN
+      IF cell//4 = 0 THEN
+        SEROUT lcdPin, T9600, [cell, 1]
+      ENDIF
+    ENDIF
+  NEXT
+
+  IF level // 2 = 1 THEN
+    winLoc = Line3
+  ELSE
+    winLoc = Line2
+  ENDIF
+  SEROUT lcdPin, T9600, [(winLoc + ((level - 1)/2)), 2]
+
+  cell = hldCell
+  SEROUT lcdPin, T9600, [cell, 0, 210, 217]
+
+
+
+
+
+begin:
+
+  DO
+
+    FOR counter = 1 TO 150
+      IF pshbtn = 1 THEN
+        GOTO gamePause
+      ENDIF
+    NEXT
+
+    PULSIN xIn, 1, x
+    PULSIN yIn, 1, y
+
+
+
+    x = x - 2450 ** 10485
+
+    y = y - 2450 ** 10485
+
+    pCell = cell
+
+    ACC = ACC + 220
+
+    IF (y > 22 AND y < 92) THEN
+      IF (cell <> Line0+19 AND cell <> Line1+19 AND cell <> Line2+19 AND cell <> Line3+19)THEN
+        cell = cell + 1
+        tone = rightTone
+      ENDIF
+    ELSEIF (y < 10472 AND y > 10395) THEN
+      IF (cell <> Line0 AND cell <> Line1 AND cell <> Line2 AND cell <> Line3)THEN
+        cell = cell - 1
+        tone = leftTone
+      ENDIF
+    ENDIF
+
+    IF (x > 10390 AND x < 10455) THEN
+      IF ((cell < Line2 OR cell > Line2+18)AND cell >= Line1) THEN
+        cell = cell - 20
+        tone = upTone
+      ENDIF
+    ELSEIF (x < 75 AND x > 15) THEN
+      IF ((cell < Line1 OR cell > Line1+17 OR cell = Line2+18) AND cell < Line3) THEN
+        cell = cell + 20
+        tone = downTone
+      ENDIF
+    ENDIF
+
+    ACC = ACC + 28
+
+    IF cell <> pCell THEN
+      IF cell = winLoc THEN
+        SEROUT lcdPin, T9600, [pCell,  " ", cell, 3, tone]
+        PAUSE 250
+        GOTO LevelUp
+      ELSE
+        SEROUT lcdPin, T9600, [pCell, " ", cell, 0, tone]
+      ENDIF
+      ACC = ACC + 12
+    ENDIF
+
+    IF ((cell >= Line0 AND cell <= Line0 + 19) OR (cell >= Line2 AND cell <= Line2 + 19)) THEN
+      IF cell//4 = 2 THEN
+        PAUSE 250
+        GOTO winMessage
+      ENDIF
+    ELSEIF ((cell >= Line1 AND cell <= Line1 + 19) OR (cell >= Line3 AND cell <= Line3 + 19)) THEN
+      IF cell//4 = 0 AND cell <> Line3 THEN
+        PAUSE 250
+        GOTO winMessage
+      ENDIF
+    ENDIF
+
+    ACC = ACC + 18
+
+    IF ACC >= 60000 THEN
+      excess = excess + 1
+      ACC = ACC - 60000
+    ENDIF
+
+    IF pshbtn = 1 THEN
+      GOTO gamePause
+    ENDIF
+
+  LOOP
+
+
+
+LevelUp:
+  level = level+1
+  SEROUT lcdPin, T9600, [12]
+  PAUSE 5
+  GOTO initialize
+
+winMessage:
+  SEROUT lcdPin, T9600, [12]
+  PAUSE 5
+  ACC = ACC/10
+  SEROUT lcdPin, T9600, [Line0, "Level: ", DEC level, Line1, "Time: ", DEC (ACC/100 + (excess * 60)), ".", DEC2 ACC//100, "s", 218, 210, 228, 228, 213, 230]
+  READ Third, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+  FOR counter = 1 TO 1500
+    IF pshbtn = 1 AND (level < levelD OR (level = levelD AND (ACC + (excess * 60)) < (ACCD + (excessD * 60)))) THEN
+      GOTO initWSound
+    ENDIF
+  NEXT
+
+
+  IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) >= (ACCD + (excessD * 60))) THEN
+    GOTO editLeader
+  ELSE
+
+    GOTO hold
+  ENDIF
+
+gamePause:
+
+  SEROUT lcdPin, T9600, [12]
+  PAUSE 5
+  SEROUT lcdPin, T9600, [Line0+7, "PAUSE"]
+
+  PAUSE 750
+  hldCell = cell
+
+  DO
+  LOOP UNTIL pshbtn = 1
+
+  PAUSE 500
+
+  GOTO initialize
+
+
+
+editLeader:
+
+  rank = Third
+  READ Second, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+  IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) >= (ACCD + (excessD * 60))) THEN
+
+    rank = Second
+    WRITE Third, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+
+    READ First, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+    IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) >= (ACCD + (excessD * 60))) THEN
+
+      rank = First
+      WRITE Second, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+
+    ENDIF
+
+  ENDIF
+
+  cell = Line2+13
+  SEROUT lcdPin, T9600, [Line2, "Leader Name: ", Line3 + 13, 4, 4, 4, cell, 23]
+  hldCell = 0
+  DO
+    pCell = 65
+    SEROUT lcdPin, T9600, [cell, pCell, 8]
+    FOR counter = 1 TO 2000
+      IF pshbtn = 1 THEN
+        pCell=pCell+1
+        IF pCell = 33 THEN
+          pCell = 65
+        ELSEIF pCell = 96 THEN
+          pCell = 32
+        ENDIF
+        PAUSE 350
+        counter = 1
+        SEROUT lcdPin, T9600, [cell, pCell, 8]
+      ENDIF
+    NEXT
+    leader(hldCell) = pCell
+    hldCell = hldCell + 1
+    cell = cell + 1
+  LOOP UNTIL hldCell = 3
+
+  WRITE rank, leader(0), leader(1), leader(2), Word level, excess, Word (ACC * 10)
+  PAUSE 1000
+  GOTO hold
+
+
+LeaderBoard:
+
+  SEROUT lcdPin, T9600, [Line0,"#NAME LEVEL TIME"]
+  FOR counter = 0 TO 2
+    LOOKUP counter, [First, Second, Third], rank
+    READ rank, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+    ACCD = ACCD/10
+    IF level > 999 THEN
+      SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "  ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
+    ELSEIF level > 99 THEN
+      SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "   ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
+    ELSEIF level > 9 THEN
+      SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "    ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
+    ELSE
+      SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "     ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
+    ENDIF
+  NEXT
+
+  PAUSE 1000
+
+  DO
+  LOOP UNTIL pshbtn = 1
+
+  PAUSE 250
+  GOTO hold
