@@ -1,5 +1,7 @@
 'Purgatory 2.0
 'Author: Jesse Offei-Nkansah
+'Created: 3.2.2017
+'Updated: 4.27.2017
 
 
 ' {$STAMP BS2}
@@ -32,8 +34,8 @@ ACCD           VAR     Word
 excess         VAR     Byte
 excessD        VAR     Byte
 tone           VAR     Byte
-level          VAR     Word
-levelD         VAR     Word
+level          VAR     Byte
+levelD         VAR     Byte
 winLoc         VAR     Byte
 rank           VAR     Word
 leader         VAR     Byte(3)
@@ -41,9 +43,9 @@ leader         VAR     Byte(3)
 
 
 
-First          DATA    "J", "E", "S", 1, Word 0, Word 28740
-Second         DATA    "T", "Y", " ", 1, Word 0, Word 28750
-Third          DATA    "N", "/", "A", 0, Word 0, Word 0
+First          DATA    "J", "E", "S", 1, 0, Word 28740
+Second         DATA    "T", "Y", " ", 1, 0, Word 28750
+Third          DATA    "N", "/", "A", 0, 0, Word 0
 
 
 
@@ -106,7 +108,7 @@ SEROUT lcdPin, T9600, [252,
 
 
 hold:
-  SEROUT lcdPin, T9600, [21]
+  SEROUT lcdPin, T9600, [21, 17]
   PAUSE 5
 
   DO
@@ -129,6 +131,8 @@ initWSound:
   hldCell = Line0
   level = 1
   ACC = 0
+  rank = 0
+  excessD = 0
   SEROUT lcdPin, T9600, [218, 212, 225, 210, 228, 227, 211, 226, 225, 213, 229]
 
 
@@ -183,7 +187,7 @@ begin:
 
     pCell = cell
 
-    ACC = ACC + 220
+    rank = rank + 220
 
     IF (y > 22 AND y < 92) THEN
       IF (cell <> Line0+19 AND cell <> Line1+19 AND cell <> Line2+19 AND cell <> Line3+19)THEN
@@ -209,32 +213,51 @@ begin:
       ENDIF
     ENDIF
 
-    ACC = ACC + 28
+    rank = rank + 28
 
     IF cell <> pCell THEN
       IF cell = winLoc THEN
         SEROUT lcdPin, T9600, [pCell,  " ", cell, 3, tone]
         PAUSE 250
+        ACC = ACC + rank
+        excess = excess + excessD
         GOTO LevelUp
       ELSE
         SEROUT lcdPin, T9600, [pCell, " ", cell, 0, tone]
       ENDIF
-      ACC = ACC + 12
+      rank = rank + 12
     ENDIF
 
     IF ((cell >= Line0 AND cell <= Line0 + 19) OR (cell >= Line2 AND cell <= Line2 + 19)) THEN
       IF cell//4 = 2 THEN
         PAUSE 250
+        rank = rank + ACC
+        excessD = excessD + excess
+        IF level = 1 THEN
+          ACC = rank
+          excess = excessD
+        ENDIF
         GOTO winMessage
       ENDIF
     ELSEIF ((cell >= Line1 AND cell <= Line1 + 19) OR (cell >= Line3 AND cell <= Line3 + 19)) THEN
       IF cell//4 = 0 AND cell <> Line3 THEN
         PAUSE 250
+        rank = rank + ACC
+        excessD = excessD + excess
+        IF level = 1 THEN
+          ACC = rank
+          excess = excessD
+        ENDIF
         GOTO winMessage
       ENDIF
     ENDIF
 
-    ACC = ACC + 18
+    rank = rank + 18
+
+    IF rank >= 60000 THEN
+      excessD = excessD + 1
+      rank = rank - 60000
+    ENDIF
 
     IF ACC >= 60000 THEN
       excess = excess + 1
@@ -259,19 +282,21 @@ winMessage:
   SEROUT lcdPin, T9600, [12]
   PAUSE 5
   ACC = ACC/10
+
   SEROUT lcdPin, T9600, [Line0, "Level: ", DEC level, Line1, "Time: ", DEC (ACC/100 + (excess * 60)), ".", DEC2 ACC//100, "s", 218, 210, 228, 228, 213, 230]
-  READ Third, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+
+  'SEROUT lcdPin, T9600, [Line1, "TLT: ", DEC (x + (excess * 60)), ".", DEC2 y, "s"]
+  READ Third, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
   FOR counter = 1 TO 1500
-    IF pshbtn = 1 AND (level < levelD OR (level = levelD AND (ACC + (excess * 60)) < (ACCD + (excessD * 60)))) THEN
+    IF pshbtn = 1 AND (level < levelD OR level = 1 OR (level = levelD AND (ACC + (excess * 60)) < (ACCD + (excessD * 60)))) THEN
       GOTO initWSound
     ENDIF
   NEXT
 
 
-  IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) >= (ACCD + (excessD * 60))) THEN
+  IF level > levelD OR (level <> 1 AND (level = levelD AND (ACC + (excess * 60)) <= (ACCD + (excessD * 60)))) THEN
     GOTO editLeader
   ELSE
-
     GOTO hold
   ENDIF
 
@@ -296,17 +321,17 @@ gamePause:
 editLeader:
 
   rank = Third
-  READ Second, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
-  IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) >= (ACCD + (excessD * 60))) THEN
+  READ Second, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
+  IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) <= (ACCD + (excessD * 60))) THEN
 
     rank = Second
-    WRITE Third, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+    WRITE Third, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
 
-    READ First, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
-    IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) >= (ACCD + (excessD * 60))) THEN
+    READ First, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
+    IF level > levelD OR (level = levelD AND (ACC + (excess * 60)) <= (ACCD + (excessD * 60))) THEN
 
       rank = First
-      WRITE Second, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+      WRITE Second, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
 
     ENDIF
 
@@ -336,7 +361,7 @@ editLeader:
     cell = cell + 1
   LOOP UNTIL hldCell = 3
 
-  WRITE rank, leader(0), leader(1), leader(2), Word level, excess, Word (ACC * 10)
+  WRITE rank, leader(0), leader(1), leader(2), level, excess, Word (ACC * 10)
   PAUSE 1000
   GOTO hold
 
@@ -346,17 +371,22 @@ LeaderBoard:
   SEROUT lcdPin, T9600, [Line0,"#NAME LEVEL TIME"]
   FOR counter = 0 TO 2
     LOOKUP counter, [First, Second, Third], rank
-    READ rank, leader(0), leader(1), leader(2), Word levelD, excessD, Word ACCD
+    READ rank, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
     ACCD = ACCD/10
-    IF level > 999 THEN
-      SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "  ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
-    ELSEIF level > 99 THEN
+    'IF level > 999 THEN
+    '  SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "  ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
+    'ELSE
+    IF level > 99 THEN
       SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "   ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
     ELSEIF level > 9 THEN
       SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "    ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
     ELSE
       SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "     ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
     ENDIF
+
+
+
+
   NEXT
 
   PAUSE 1000
