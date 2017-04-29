@@ -281,9 +281,8 @@ LevelUp:
 winMessage:
   SEROUT lcdPin, T9600, [12]
   PAUSE 5
-  ACC = ACC/10
 
-  SEROUT lcdPin, T9600, [Line0, "Level: ", DEC level, Line1, "Time: ", DEC (ACC/100 + (excess * 60)), ".", DEC2 ACC//100, "s", 218, 210, 228, 228, 213, 230]
+  SEROUT lcdPin, T9600, [Line0, "Level: ", DEC level, Line1, "Time: ", DEC ((ACC/10)/100 + (excess * 60)), ".", DEC2 (ACC/10)//100, "s", 218, 210, 228, 228, 213, 230]
 
   'SEROUT lcdPin, T9600, [Line1, "TLT: ", DEC (x + (excess * 60)), ".", DEC2 y, "s"]
   READ Third, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
@@ -361,7 +360,7 @@ editLeader:
     cell = cell + 1
   LOOP UNTIL hldCell = 3
 
-  WRITE rank, leader(0), leader(1), leader(2), level, excess, Word (ACC * 10)
+  WRITE rank, leader(0), leader(1), leader(2), level, excess, Word ACC
   PAUSE 1000
   GOTO hold
 
@@ -373,9 +372,6 @@ LeaderBoard:
     LOOKUP counter, [First, Second, Third], rank
     READ rank, leader(0), leader(1), leader(2), levelD, excessD, Word ACCD
     ACCD = ACCD/10
-    'IF level > 999 THEN
-    '  SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "  ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
-    'ELSE
     IF level > 99 THEN
       SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "   ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
     ELSEIF level > 9 THEN
@@ -383,9 +379,6 @@ LeaderBoard:
     ELSE
       SEROUT lcdPin, T9600, [13, DEC counter+1, leader(0), leader(1), leader(2), "  ", DEC levelD, "     ", DEC (ACCD/100 + (excessD * 60)), ".", DEC2 ACCD//100, "s"]
     ENDIF
-
-
-
 
   NEXT
 
