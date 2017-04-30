@@ -26,7 +26,7 @@ Terribly hard maze game based off of the Basic Stamp 2 (BS2)
 <-----REQUIRED MATERIALS------><br>
 
 | Quantity      |Item                                   |<br>
-| ------------- | ------------------------------------- |<br>
+| :-----------: | :-----------------------------------: |<br>
 | 1             |Basic Stamp 2 (BS2) Homework Board     |<br>
 | 1             |9V DC Battery                          |<br>
 | 7             |Jumper Wires                           |<br>
